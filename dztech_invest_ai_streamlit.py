@@ -49,7 +49,11 @@ opcoes = {
     "Petrobras (PETR4)": "PETR4.SA",
     "Vale (VALE3)": "VALE3.SA",
     "Magazine Luiza (MGLU3)": "MGLU3.SA",
-    "Banco do Brasil (BBAS3)": "BBAS3.SA"
+    "Banco do Brasil (BBAS3)": "BBAS3.SA",
+    "Itaú Unibanco (ITUB4)": "ITUB4.SA",
+    "B3 (B3SA3)": "B3SA3.SA",
+    "WEG (WEGE3)": "WEGE3.SA",
+    "Ambev (ABEV3)": "ABEV3.SA"
 }
 ativo = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
 ticker = opcoes[ativo]
