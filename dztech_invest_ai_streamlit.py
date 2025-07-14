@@ -55,61 +55,61 @@ opcoes = {
     "WEG (WEGE3)": "WEGE3.SA",
     "Ambev (ABEV3)": "ABEV3.SA"
 }
-ativo = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
-ticker = opcoes[ativo]
+ativo_nome = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
+ticker = opcoes[ativo_nome]
 
 if st.button("🚀 Rodar IA"):
     st.info(f"🔍 Coletando dados do ativo **{ticker}**...")
     df = yf.download(ticker, period="6mo", interval="1d").dropna()
 
-    df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
-    df['Return'] = df['Close'].pct_change()
-    df.dropna(inplace=True)
-
-    X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
-    y = df['Target']
-
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X[:-1], y[:-1])
-
-    pred = model.predict([X.iloc[-1]])[0]
-    acc = accuracy_score(y[:-1], model.predict(X[:-1])) * 100
-
-    st.success(f"Acurácia da IA: {acc:.2f}%")
-
-    if pred == 1:
-        st.markdown("🟢 **A IA prevê que o preço vai subir.**")
-        st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
+    if df.empty:
+        st.error("❌ Não foi possível carregar os dados. Tente novamente.")
     else:
-        st.markdown("🔴 **A IA prevê que o preço vai cair.**")
-        st.error(f"🚫 Ordem simulada: VENDER {ticker}")
+        df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
+        df['Return'] = df['Close'].pct_change()
+        df.dropna(inplace=True)
 
- if not dados.empty:
-    import plotly.graph_objects as go
+        X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
+        y = df['Target']
 
-    fig = go.Figure()
+        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        model.fit(X[:-1], y[:-1])
 
-    fig.add_trace(go.Scatter(
-        x=dados.index,
-        y=dados['Close'],
-        mode='lines+markers',
-        name=ativo_nome,
-        line=dict(
-            color='limegreen' if dados['Close'][-1] >= dados['Close'][0] else 'crimson',
-            width=3
+        pred = model.predict([X.iloc[-1]])[0]
+        acc = accuracy_score(y[:-1], model.predict(X[:-1])) * 100
+
+        st.success(f"Acurácia da IA: {acc:.2f}%")
+
+        if pred == 1:
+            st.markdown("🟢 **A IA prevê que o preço vai subir.**")
+            st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
+        else:
+            st.markdown("🔴 **A IA prevê que o preço vai cair.**")
+            st.error(f"🚫 Ordem simulada: VENDER {ticker}")
+
+        # Gráfico interativo
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=df.index,
+            y=df['Close'],
+            mode='lines+markers',
+            name=ativo_nome,
+            line=dict(
+                color='limegreen' if df['Close'][-1] >= df['Close'][0] else 'crimson',
+                width=3
+            )
+        ))
+
+        fig.update_layout(
+            title=f"Evolução do preço de fechamento - {ativo_nome}",
+            xaxis_title="Data",
+            yaxis_title="Preço (R$)",
+            template="plotly_dark",
+            showlegend=True,
+            margin=dict(l=20, r=20, t=40, b=20)
         )
-    ))
 
-    fig.update_layout(
-        title=f"Evolução do preço de fechamento - {ativo_nome}",
-        xaxis_title="Data",
-        yaxis_title="Preço (R$)",
-        template="plotly_dark",
-        showlegend=True,
-        margin=dict(l=20, r=20, t=40, b=20)
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
 # Rodapé
 st.markdown("""
