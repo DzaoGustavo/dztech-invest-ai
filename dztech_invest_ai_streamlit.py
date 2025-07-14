@@ -38,7 +38,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # LOGO
-st.image("DZtech_Final.png", use_column_width=False, width=180)
+st.image("DZtech_Final.png", use_container_width=False, width=180)
 
 # TÍTULO
 st.markdown("<div class='logo-title'>📈 DzTech Invest AI</div>", unsafe_allow_html=True)
