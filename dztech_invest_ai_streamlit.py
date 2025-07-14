@@ -84,29 +84,32 @@ if st.button("🚀 Rodar IA"):
         st.markdown("🔴 **A IA prevê que o preço vai cair.**")
         st.error(f"🚫 Ordem simulada: VENDER {ticker}")
 
-   fig = go.Figure()
+ if not dados.empty:
+    import plotly.graph_objects as go
 
-fig.add_trace(go.Scatter(
-    x=dados.index,
-    y=dados['Close'],
-    mode='lines+markers',
-    name=ativo_nome,
-    line=dict(
-        color='limegreen' if dados['Close'][-1] >= dados['Close'][0] else 'crimson',
-        width=3
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=dados.index,
+        y=dados['Close'],
+        mode='lines+markers',
+        name=ativo_nome,
+        line=dict(
+            color='limegreen' if dados['Close'][-1] >= dados['Close'][0] else 'crimson',
+            width=3
+        )
+    ))
+
+    fig.update_layout(
+        title=f"Evolução do preço de fechamento - {ativo_nome}",
+        xaxis_title="Data",
+        yaxis_title="Preço (R$)",
+        template="plotly_dark",
+        showlegend=True,
+        margin=dict(l=20, r=20, t=40, b=20)
     )
-))
 
-fig.update_layout(
-    title=f"Evolução do preço de fechamento - {ativo_nome}",
-    xaxis_title="Data",
-    yaxis_title="Preço (R$)",
-    template="plotly_dark",
-    showlegend=True,
-    margin=dict(l=20, r=20, t=40, b=20)
-)
-
-st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
 # Rodapé
 st.markdown("""
