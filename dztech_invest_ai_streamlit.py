@@ -100,17 +100,18 @@ if st.button("🚀 Rodar IA"):
             st.markdown("🔴 **A IA prevê que o preço vai cair.**")
             st.error(f"🚫 Ordem simulada: VENDER {ticker}")
 
-        # GRÁFICO COM SEGURANÇA
+        # GRÁFICO CORRIGIDO
         try:
-            if 'Close' in df.columns and len(df['Close'].dropna()) > 1:
-                preco_inicio = float(df['Close'].iloc[0])
-                preco_fim = float(df['Close'].iloc[-1])
+            close_data = df['Close'].dropna()
+            if close_data.shape[0] > 2:
+                preco_inicio = float(close_data.iloc[0])
+                preco_fim = float(close_data.iloc[-1])
                 cor = 'limegreen' if preco_fim >= preco_inicio else 'crimson'
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
-                    x=pd.to_datetime(df.index),
-                    y=df['Close'],
+                    x=pd.to_datetime(close_data.index),
+                    y=close_data,
                     mode='lines+markers',
                     name=ativo_nome,
                     line=dict(color=cor, width=3)
@@ -127,7 +128,7 @@ if st.button("🚀 Rodar IA"):
 
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning("⚠️ Não há dados suficientes para exibir o gráfico.")
+                st.warning("⚠️ O gráfico não pode ser exibido: dados insuficientes.")
         except Exception as e:
             st.error(f"Erro ao exibir o gráfico: {e}")
 
