@@ -53,8 +53,12 @@ opcoes = {
     "Itaú Unibanco (ITUB4)": "ITUB4.SA",
     "B3 (B3SA3)": "B3SA3.SA",
     "WEG (WEGE3)": "WEGE3.SA",
-    "Ambev (ABEV3)": "ABEV3.SA"
+    "Ambev (ABEV3)": "ABEV3.SA",
+    "Lojas Renner (LREN3)": "LREN3.SA",
+    "Suzano (SUZB3)": "SUZB3.SA",
+    "Eletrobras (ELET3)": "ELET3.SA"
 }
+
 ativo_nome = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
 ticker = opcoes[ativo_nome]
 
@@ -63,41 +67,36 @@ if st.button("🚀 Rodar IA"):
     st.info(f"🔍 Coletando dados do ativo **{ticker}**...")
     df = yf.download(ticker, period="6mo", interval="1d").dropna()
 
-    if df.empty:
-        st.error("Erro ao coletar dados. Verifique se o ativo está disponível.")
+    df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
+    df['Return'] = df['Close'].pct_change()
+    df.dropna(inplace=True)
+
+    X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
+    y = df['Target']
+
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X[:-1], y[:-1])
+
+    pred = model.predict([X.iloc[-1]])[0]
+    acc = accuracy_score(y[:-1], model.predict(X[:-1])) * 100
+
+    st.success(f"Acurácia da IA: {acc:.2f}%")
+
+    if pred == 1:
+        st.markdown("🟢 **A IA prevê que o preço vai subir.**")
+        st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
     else:
-        # Features
-        df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
-        df['Return'] = df['Close'].pct_change()
-        df.dropna(inplace=True)
+        st.markdown("🔴 **A IA prevê que o preço vai cair.**")
+        st.error(f"🚫 Ordem simulada: VENDER {ticker}")
 
-        X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
-        y = df['Target']
-
-        # Modelo
-        model = RandomForestClassifier(n_estimators=100, random_state=42)
-        model.fit(X[:-1], y[:-1])
-
-        pred = model.predict([X.iloc[-1]])[0]
-        acc = accuracy_score(y[:-1], model.predict(X[:-1])) * 100
-
-        st.success(f"Acurácia da IA: {acc:.2f}%")
-
-        if pred == 1:
-            st.markdown("🟢 **A IA prevê que o preço vai subir.**")
-            st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
-        else:
-            st.markdown("🔴 **A IA prevê que o preço vai cair.**")
-            st.error(f"🚫 Ordem simulada: VENDER {ticker}")
-
-        # GRÁFICO
-        if len(df) >= 2:
-            preco_inicio = df['Close'].iloc[0]
-            preco_fim = df['Close'].iloc[-1]
+    # GRÁFICO
+    if len(df) >= 2:
+        try:
+            preco_inicio = float(df['Close'].iloc[0])
+            preco_fim = float(df['Close'].iloc[-1])
             cor = 'limegreen' if preco_fim >= preco_inicio else 'crimson'
 
             fig = go.Figure()
-
             fig.add_trace(go.Scatter(
                 x=df.index,
                 y=df['Close'],
@@ -116,8 +115,11 @@ if st.button("🚀 Rodar IA"):
             )
 
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Não há dados suficientes para exibir o gráfico.")
+
+        except Exception as e:
+            st.warning(f"Erro ao exibir gráfico: {e}")
+    else:
+        st.warning("Não há dados suficientes para exibir o gráfico.")
 
 # Rodapé
 st.markdown("""
