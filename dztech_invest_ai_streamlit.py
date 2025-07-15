@@ -44,7 +44,7 @@ st.image("DZtech_Final.png", use_container_width=False, width=180)
 st.markdown("<div class='logo-title'>📈 DzTech Invest AI</div>", unsafe_allow_html=True)
 st.write("Escolha um ativo, rode a IA e veja se ela compraria ou venderia com base na previsão!")
 
-# OPÇÕES
+# OPÇÕES DE ATIVOS
 opcoes = {
     "Petrobras (PETR4)": "PETR4.SA",
     "Vale (VALE3)": "VALE3.SA",
@@ -55,61 +55,69 @@ opcoes = {
     "WEG (WEGE3)": "WEGE3.SA",
     "Ambev (ABEV3)": "ABEV3.SA"
 }
-ativo = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
-ticker = opcoes[ativo]
+ativo_nome = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
+ticker = opcoes[ativo_nome]
 
-# IA
+# BOTÃO
 if st.button("🚀 Rodar IA"):
     st.info(f"🔍 Coletando dados do ativo **{ticker}**...")
     df = yf.download(ticker, period="6mo", interval="1d").dropna()
 
-    df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
-    df['Return'] = df['Close'].pct_change()
-    df.dropna(inplace=True)
-
-    X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
-    y = df['Target']
-
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X[:-1], y[:-1])
-
-    pred = model.predict([X.iloc[-1]])[0]
-    acc = accuracy_score(y[:-1], model.predict(X[:-1])) * 100
-
-    st.success(f"Acurácia da IA: {acc:.2f}%")
-
-    if pred == 1:
-        st.markdown("🟢 **A IA prevê que o preço vai subir.**")
-        st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
+    if df.empty:
+        st.error("Erro ao coletar dados. Verifique se o ativo está disponível.")
     else:
-        st.markdown("🔴 **A IA prevê que o preço vai cair.**")
-        st.error(f"🚫 Ordem simulada: VENDER {ticker}")
+        # Features
+        df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
+        df['Return'] = df['Close'].pct_change()
+        df.dropna(inplace=True)
 
-    # GRÁFICO
-    if not df.empty:
-        fig = go.Figure()
+        X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
+        y = df['Target']
 
-        fig.add_trace(go.Scatter(
-            x=df.index,
-            y=df['Close'],
-            mode='lines+markers',
-            name=ativo,
-            line=dict(
-                color='limegreen' if df['Close'].iloc[-1] >= df['Close'].iloc[0] else 'crimson',
-                width=3
+        # Modelo
+        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        model.fit(X[:-1], y[:-1])
+
+        pred = model.predict([X.iloc[-1]])[0]
+        acc = accuracy_score(y[:-1], model.predict(X[:-1])) * 100
+
+        st.success(f"Acurácia da IA: {acc:.2f}%")
+
+        if pred == 1:
+            st.markdown("🟢 **A IA prevê que o preço vai subir.**")
+            st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
+        else:
+            st.markdown("🔴 **A IA prevê que o preço vai cair.**")
+            st.error(f"🚫 Ordem simulada: VENDER {ticker}")
+
+        # GRÁFICO
+        if len(df) >= 2:
+            preco_inicio = df['Close'].iloc[0]
+            preco_fim = df['Close'].iloc[-1]
+            cor = 'limegreen' if preco_fim >= preco_inicio else 'crimson'
+
+            fig = go.Figure()
+
+            fig.add_trace(go.Scatter(
+                x=df.index,
+                y=df['Close'],
+                mode='lines+markers',
+                name=ativo_nome,
+                line=dict(color=cor, width=3)
+            ))
+
+            fig.update_layout(
+                title=f"Evolução do preço de fechamento - {ativo_nome}",
+                xaxis_title="Data",
+                yaxis_title="Preço (R$)",
+                template="plotly_dark",
+                showlegend=True,
+                margin=dict(l=20, r=20, t=40, b=20)
             )
-        ))
 
-        fig.update_layout(
-            title=f"Evolução do preço de fechamento - {ativo}",
-            xaxis_title="Data",
-            yaxis_title="Preço (R$)",
-            template="plotly_dark",
-            showlegend=True,
-            margin=dict(l=20, r=20, t=40, b=20)
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Não há dados suficientes para exibir o gráfico.")
 
 # Rodapé
 st.markdown("""
