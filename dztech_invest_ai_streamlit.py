@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 import plotly.graph_objs as go
 
-# CONFIG
+# CONFIGURAÇÃO
 st.set_page_config(page_title="DzTech Invest AI", layout="centered", page_icon="📈")
 
 # CSS customizado
@@ -62,7 +62,7 @@ opcoes = {
 ativo_nome = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
 ticker = opcoes[ativo_nome]
 
-# BOTÃO DE EXECUÇÃO
+# BOTÃO
 if st.button("🚀 Rodar IA"):
     st.info(f"🔍 Coletando dados do ativo **{ticker}**...")
     df = yf.download(ticker, period="6mo", interval="1d").dropna()
@@ -100,35 +100,38 @@ if st.button("🚀 Rodar IA"):
             st.markdown("🔴 **A IA prevê que o preço vai cair.**")
             st.error(f"🚫 Ordem simulada: VENDER {ticker}")
 
-        # GRÁFICO
-        if not df.empty and 'Close' in df.columns and df['Close'].notnull().sum() > 1:
-            preco_inicio = float(df['Close'].iloc[0])
-            preco_fim = float(df['Close'].iloc[-1])
-            cor = 'limegreen' if preco_fim >= preco_inicio else 'crimson'
+        # GRÁFICO COM SEGURANÇA
+        try:
+            if 'Close' in df.columns and len(df['Close'].dropna()) > 1:
+                preco_inicio = float(df['Close'].iloc[0])
+                preco_fim = float(df['Close'].iloc[-1])
+                cor = 'limegreen' if preco_fim >= preco_inicio else 'crimson'
 
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=pd.to_datetime(df.index),
-                y=df['Close'],
-                mode='lines+markers',
-                name=ativo_nome,
-                line=dict(color=cor, width=3)
-            ))
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=pd.to_datetime(df.index),
+                    y=df['Close'],
+                    mode='lines+markers',
+                    name=ativo_nome,
+                    line=dict(color=cor, width=3)
+                ))
 
-            fig.update_layout(
-                title=f"Evolução do preço de fechamento - {ativo_nome}",
-                xaxis_title="Data",
-                yaxis_title="Preço (R$)",
-                template="plotly_dark",
-                showlegend=True,
-                margin=dict(l=20, r=20, t=40, b=20)
-            )
+                fig.update_layout(
+                    title=f"Evolução do preço de fechamento - {ativo_nome}",
+                    xaxis_title="Data",
+                    yaxis_title="Preço (R$)",
+                    template="plotly_dark",
+                    showlegend=True,
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
 
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("⚠️ Não foi possível gerar o gráfico.")
-        
-# Rodapé
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("⚠️ Não há dados suficientes para exibir o gráfico.")
+        except Exception as e:
+            st.error(f"Erro ao exibir o gráfico: {e}")
+
+# RODAPÉ
 st.markdown("""
     <footer>
         DzTech Invest AI © 2025<br>
