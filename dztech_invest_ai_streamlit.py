@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 import plotly.graph_objs as go
 
 # CONFIG
@@ -58,47 +59,56 @@ opcoes = {
     "Suzano (SUZB3)": "SUZB3.SA",
     "Eletrobras (ELET3)": "ELET3.SA"
 }
-
 ativo_nome = st.selectbox("Selecione o ativo:", list(opcoes.keys()))
 ticker = opcoes[ativo_nome]
 
-# BOTÃO
+# BOTÃO DE EXECUÇÃO
 if st.button("🚀 Rodar IA"):
     st.info(f"🔍 Coletando dados do ativo **{ticker}**...")
     df = yf.download(ticker, period="6mo", interval="1d").dropna()
 
-    df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
-    df['Return'] = df['Close'].pct_change()
-    df.dropna(inplace=True)
-
-    X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
-    y = df['Target']
-
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X[:-1], y[:-1])
-
-    pred = model.predict([X.iloc[-1]])[0]
-    acc = accuracy_score(y[:-1], model.predict(X[:-1])) * 100
-
-    st.success(f"Acurácia da IA: {acc:.2f}%")
-
-    if pred == 1:
-        st.markdown("🟢 **A IA prevê que o preço vai subir.**")
-        st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
+    if df.empty or len(df) < 20:
+        st.error("⚠️ Dados insuficientes para análise. Tente outro ativo.")
     else:
-        st.markdown("🔴 **A IA prevê que o preço vai cair.**")
-        st.error(f"🚫 Ordem simulada: VENDER {ticker}")
+        # Preparação dos dados
+        df['Target'] = np.where(df['Close'].shift(-1) > df['Close'], 1, 0)
+        df['Return'] = df['Close'].pct_change()
+        df.dropna(inplace=True)
 
-    # GRÁFICO
-    if len(df) >= 2:
-        try:
+        X = df[['Open', 'High', 'Low', 'Close', 'Volume', 'Return']]
+        y = df['Target']
+
+        # Dividir dados entre treino e teste
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, shuffle=False
+        )
+
+        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        model.fit(X_train, y_train)
+
+        acc = accuracy_score(y_test, model.predict(X_test)) * 100
+
+        # Previsão atual
+        pred = model.predict([X.iloc[-1]])[0]
+
+        st.success(f"Acurácia da IA nos dados de teste: {acc:.2f}%")
+
+        if pred == 1:
+            st.markdown("🟢 **A IA prevê que o preço vai subir.**")
+            st.success(f"✅ Ordem simulada: COMPRAR {ticker}")
+        else:
+            st.markdown("🔴 **A IA prevê que o preço vai cair.**")
+            st.error(f"🚫 Ordem simulada: VENDER {ticker}")
+
+        # GRÁFICO
+        if not df.empty and 'Close' in df.columns and df['Close'].notnull().sum() > 1:
             preco_inicio = float(df['Close'].iloc[0])
             preco_fim = float(df['Close'].iloc[-1])
             cor = 'limegreen' if preco_fim >= preco_inicio else 'crimson'
 
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=df.index,
+                x=pd.to_datetime(df.index),
                 y=df['Close'],
                 mode='lines+markers',
                 name=ativo_nome,
@@ -115,12 +125,9 @@ if st.button("🚀 Rodar IA"):
             )
 
             st.plotly_chart(fig, use_container_width=True)
-
-        except Exception as e:
-            st.warning(f"Erro ao exibir gráfico: {e}")
-    else:
-        st.warning("Não há dados suficientes para exibir o gráfico.")
-
+        else:
+            st.warning("⚠️ Não foi possível gerar o gráfico.")
+        
 # Rodapé
 st.markdown("""
     <footer>
